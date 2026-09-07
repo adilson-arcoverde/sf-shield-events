@@ -1,0 +1,78 @@
+{
+  "name": "sf-shield-events",
+  "version": "0.1.0",
+  "description": "Extract Salesforce Shield Event Monitoring logs and turn them into Rill dashboards",
+  "keywords": [
+    "salesforce",
+    "sf-plugin",
+    "event-monitoring",
+    "shield",
+    "duckdb",
+    "parquet"
+  ],
+  "homepage": "https://github.com/adilson-arcoverde/sf-shield-events#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adilson-arcoverde/sf-shield-events.git"
+  },
+  "bugs": {
+    "url": "https://github.com/adilson-arcoverde/sf-shield-events/issues"
+  },
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "Adilson Arcoverde <adilson@adilsonarcoverde.com.br>",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "files": [
+    "/lib",
+    "/queries",
+    "/oclif.manifest.json"
+  ],
+  "dependencies": {
+    "@duckdb/node-api": "^1.5.5-r.4",
+    "@oclif/core": "^4.14.0",
+    "@salesforce/core": "^8",
+    "@salesforce/sf-plugins-core": "^12",
+    "csv-parse": "^7.0.2",
+    "csv-stringify": "^6.8.3",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "oclif": "^4",
+    "prettier": "^3.9.6",
+    "typescript": "^5",
+    "typescript-eslint": "^8.69.0"
+  },
+  "oclif": {
+    "commands": "./lib/src/commands",
+    "bin": "sf",
+    "topicSeparator": " ",
+    "topics": {
+      "shield": {
+        "description": "Work with Shield Event Monitoring logs.",
+        "subtopics": {
+          "events": {
+            "description": "Discover, extract and consolidate EventLogFile data."
+          }
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "prepack": "npm run build && oclif manifest",
+    "postpack": "rm -f oclif.manifest.json",
+    "test": "node --test test/*.test.ts",
+    "lint": "eslint src test",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "check": "npm run lint && npx tsc --noEmit && npm test"
+  },
+  "bin": {
+    "sf-shield-events": "./bin/run.js"
+  }
+}

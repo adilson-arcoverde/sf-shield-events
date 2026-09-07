@@ -1,0 +1,28 @@
+# Build output and dependencies
+lib/
+node_modules/
+*.tsbuildinfo
+oclif.manifest.json
+
+# Extracted event logs. These are production data from whatever org the tool was pointed at:
+# do not commit them, and delete them when the analysis is done.
+output/
+*.csv
+*.parquet
+
+# Rill projects generated over that data
+rill.yaml
+models/
+metrics/
+dashboards/
+
+# Editor and operating system noise
+.vscode/
+.idea/
+*.swp
+.*.sw?
+.DS_Store
+
+# Logs and environment
+*.log
+.env

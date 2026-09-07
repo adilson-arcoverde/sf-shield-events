@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Lint, typecheck and the tests, which run a real DuckDB on tiny files. The Rill contract
+      # test skips itself here because Rill is not on PATH; it is exercised locally.
+      - run: npm run check
+      # The published package is the compiled output plus the oclif manifest, so prove that
+      # what npm would ship actually builds.
+      - run: npm pack --dry-run
