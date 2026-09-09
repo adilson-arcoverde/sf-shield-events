@@ -16,6 +16,9 @@ models/
 metrics/
 dashboards/
 
+# Personal notes beside the code: profile text, drafts. Not part of the project.
+notes/
+
 # Editor and operating system noise
 .vscode/
 .idea/
