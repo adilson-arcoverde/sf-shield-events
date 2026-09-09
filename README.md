@@ -44,7 +44,7 @@ questions people actually ask kept as SQL files you can read and change
 ## Installing it
 
 ```bash
-sf plugins install adilson-arcoverde/sf-shield-events
+sf plugins install sf-shield-events
 ```
 
 The CLI will say it cannot verify the publisher, because the plugin is not signed by Salesforce.
