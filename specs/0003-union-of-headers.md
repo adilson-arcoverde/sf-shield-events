@@ -29,7 +29,7 @@ they arrive, and a stream cannot wait to see the last file before writing the fi
   and Rill handle without complaint.
 - The order of columns follows first appearance across the declarations, since there is no
   schema to follow.
-- The guarantee now rests on metadata being truthful. When a file carries a column the org did
+- The guarantee rests on metadata being truthful. When a file carries a column the org did
   not declare, the writer would drop it, so the first row of every file is checked and any
   undeclared column is reported by name.
 - Two tests hold this: one that the union survives a shape change, and one that an undeclared

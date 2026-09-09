@@ -81,21 +81,21 @@ already there, since the reader may have edited it.
 
 ## The modules
 
-| Module                               | Responsibility                                                                     |
-| ------------------------------------ | ---------------------------------------------------------------------------------- |
-| `commands/shield/events/discover.ts` | The inventory query as a table, and a clear failure when the object is not visible |
+| Module                               | Responsibility                                                                        |
+| ------------------------------------ | ------------------------------------------------------------------------------------- |
+| `commands/shield/events/discover.ts` | The inventory query as a table, and a clear failure when the object is not visible    |
 | `commands/shield/events/extract.ts`  | Ask if not told, query, download each file, group by type, convert, write the project |
-| `commands/shield/events/rill.ts`     | Call `writeRillProject`, then say what it wrote                                    |
-| `commands/shield/events/mcp.ts`      | Open the directory, lock DuckDB to it, and serve the tools on stdio                |
-| `events/inventory.ts`                | The one query behind `discover` and the guide; the list lines and the command line |
-| `events/logfiles.ts`                 | The SOQL that finds the files: type names validated, interval, dates               |
-| `events/consolidate.ts`              | The union of columns and the check that a file matches it. Knows nothing of orgs   |
-| `events/stream.ts`                   | One log file, from a stream, appended to a CSV without being held                  |
-| `events/tables.ts`                   | CSV to Parquet, the reservoir sample, the views script. All through DuckDB         |
-| `events/project.ts`                  | The Rill project over a directory of tables, so a test can hand one to Rill        |
-| `events/rill.ts`                     | Column profiling and the Rill resource shapes. Knows nothing about files           |
-| `events/mcp.ts`                      | The MCP tools over a locked connection: list, describe, the questions, one SELECT  |
-| `queries/*.sql`                      | One question each, over named event types and columns                              |
+| `commands/shield/events/rill.ts`     | Call `writeRillProject`, then say what it wrote                                       |
+| `commands/shield/events/mcp.ts`      | Open the directory, lock DuckDB to it, and serve the tools on stdio                   |
+| `events/inventory.ts`                | The one query behind `discover` and the guide; the list lines and the command line    |
+| `events/logfiles.ts`                 | The SOQL that finds the files: type names validated, interval, dates                  |
+| `events/consolidate.ts`              | The union of columns and the check that a file matches it. Knows nothing of orgs      |
+| `events/stream.ts`                   | One log file, from a stream, appended to a CSV without being held                     |
+| `events/tables.ts`                   | CSV to Parquet, the reservoir sample, the views script. All through DuckDB            |
+| `events/project.ts`                  | The Rill project over a directory of tables, so a test can hand one to Rill           |
+| `events/rill.ts`                     | Column profiling and the Rill resource shapes. Knows nothing about files              |
+| `events/mcp.ts`                      | The MCP tools over a locked connection: list, describe, the questions, one SELECT     |
+| `queries/*.sql`                      | One question each, over named event types and columns                                 |
 
 The modules under `events/` know nothing about orgs or the CLI. That is what lets the
 interesting behaviour be tested without an org, and it is where the tests are. `tables.ts` runs

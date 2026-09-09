@@ -8,7 +8,7 @@
 The obvious way to read a log file is to download the body into a string and parse it. That
 works against fixtures and fails against an org.
 
-Measured on a client production org with Shield: 5,649 files, average 57 MB, **largest 910 MB**.
+Measured on a client production org with Shield: 5,649 files, average 57 MB, largest 910 MB.
 The file that a one day extraction matches can be 412 MB. A JavaScript string tops out near
 512 MB in V8, so the largest file in that org cannot be held at all, and one that fits still
 needs the text and the parsed rows in the heap together.
@@ -23,7 +23,7 @@ Stream. The body is fetched with `fetch`, using the connection's own credentials
 jsforce client buffers a response, and piped through an incremental CSV parser into an
 incremental writer. Nothing holds a file.
 
-The union of columns now comes from `LogFileFieldNames`, which the query already returns for
+The union of columns comes from `LogFileFieldNames`, which the query already returns for
 every matching file. A stream cannot wait to see the last file before writing the first row, so
 the shape has to be known before the first byte arrives. The metadata gives it.
 
@@ -50,12 +50,12 @@ streams: left to its default, DuckDB takes most of the machine, and a 920 MB CSV
 
 - Measured on a 381 MB file with 1.3 million rows: 23 seconds, peak RSS 175 MB. Memory does not
   follow file size.
-- The union of [0003](0003-union-of-headers.md) now comes from what the org declares rather than
+- The union of [0003](0003-union-of-headers.md) comes from what the org declares rather than
   from what the files reveal. That record says so; this one has the reason.
 - Trusting metadata introduces a new failure. If a file carries a column the org did not declare,
   the writer drops it, so the tool checks the first row of every file and warns by name when that
   happens rather than losing it quietly.
-- The command now reports the total download before starting and asks for confirmation above
+- The command reports the total download before starting and asks for confirmation above
   500 MB, because a one day range can mean half a gigabyte and nobody should learn that from
   their bandwidth bill. `--no-prompt` skips the question.
 - Every table costs one more pass, the conversion. A conversion that lost rows would be exactly

@@ -1,4 +1,4 @@
-# 0008: An MCP server answers questions over the extraction, read-only and capped
+# 0008: An MCP server answers questions over the extraction, read only and capped
 
 - Status: Accepted
 - Date: 2026-09-09
@@ -33,7 +33,7 @@ with their row counts, describe a table, list the ready-made questions, run one,
 `SELECT`. A description gives each column's type and its role from the same profiling that
 builds the dashboards, and shows no value.
 
-The server is read-only three ways, all enforced by DuckDB rather than by inspecting text:
+The server is read only three ways, all enforced by DuckDB rather than by inspecting text:
 
 - Only a single `SELECT` runs. Every statement goes through `json_serialize_sql` first, which
   serialises a `SELECT` and refuses anything else with an error, so `COPY`, `CREATE`, `INSTALL`

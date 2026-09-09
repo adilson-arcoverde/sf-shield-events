@@ -36,25 +36,25 @@ Only the tests read `src/` directly.
 
 ## Layout and build quirks
 
-- `src/commands/shield/events/{discover,extract,rill,mcp}.ts` — the oclif commands. Each is a
+- `src/commands/shield/events/{discover,extract,rill,mcp}.ts`: the oclif commands. Each is a
   `default export class` extending `SfCommand`; that default export is the contract oclif loads,
   so the usual no-default-export lint rule is off.
-- `src/events/{consolidate,inventory,logfiles,mcp,project,rill,stream,tables}.ts` — modules that know nothing
+- `src/events/{consolidate,inventory,logfiles,mcp,project,rill,stream,tables}.ts`: modules that know nothing
   about orgs or the CLI. They take rows, streams and file paths and return data. Keep them that
   way: this is where the tests are and the only reason the interesting behaviour is testable
   without an org. `tables.ts` is the DuckDB side (CSV to Parquet, sampling, the views script) and
   its tests run a real DuckDB on tiny files. `project.ts` writes the Rill project; its contract
-  test runs `rill validate` and is skipped without Rill on PATH — install Rill to exercise it.
+  test runs `rill validate` and is skipped without Rill on PATH. Install Rill to exercise it.
   `mcp.ts` builds the MCP server; its test talks to it through an in-memory transport.
   `inventory.ts` is the one query behind `discover` and the guided `extract`, plus the list lines
   and the printed command line, all pure.
-- `queries/*.sql` — the ready-made questions `extract` copies into the output. Shipped in the
+- `queries/*.sql`: the ready-made questions `extract` copies into the output. Shipped in the
   package (`files` in `package.json`), read at runtime from the plugin's own root
   (`this.config.plugins.get('sf-shield-events').root`), which is not `this.config.root` once the
   plugin is installed under the `sf` CLI.
 - Relative imports carry a **`.ts` extension** in source (`allowImportingTsExtensions` +
   `rewriteRelativeImportExtensions`). Follow the existing style; `.js` extensions will not match.
-- `rootDir` is `.`, so the build nests output as `lib/src/...` — which is why `package.json` sets
+- `rootDir` is `.`, so the build nests output as `lib/src/...`, which is why `package.json` sets
   oclif `commands` to `./lib/src/commands`. If you change `rootDir` or `outDir`, that path moves
   too.
 
@@ -66,7 +66,7 @@ while reporting success. Bodies are fetched with `fetch` (not the jsforce client
 and piped through `csv-parse` into `csv-stringify` into a write stream. See
 `src/events/stream.ts` and [specs/0006](specs/0006-stream-the-download.md).
 
-**No event type names and no column names are hardcoded — except in `queries/`.** Event types
+**No event type names and no column names are hardcoded, except in `queries/`.** Event types
 come from the org; the output columns come from `LogFileFieldNames` in the query; what a column
 is *for* comes from profiling its values in `profileColumns`. An event type this tool has never
 seen must still produce a usable table and dashboard. The one place names are allowed is the
@@ -80,7 +80,7 @@ DuckDB's sniffer reads the whole CSV (`sample_size=-1`) so no row fails its colu
 add `ignore_errors` to that read.
 
 **Only lossless types, and a memory limit.** The sniffer may choose BOOLEAN, BIGINT, DATE,
-TIMESTAMP, TIMESTAMPTZ or VARCHAR — never DOUBLE, which rounds a packed timestamp, nor DECIMAL,
+TIMESTAMP, TIMESTAMPTZ or VARCHAR. Never DOUBLE, which rounds a packed timestamp, nor DECIMAL,
 which turns key prefix `001` into `1`. DuckDB runs under `memory_limit = 256MB`; without it a
 920 MB CSV peaked at 2.45 GB. Keep both in `src/events/tables.ts`.
 
@@ -96,7 +96,7 @@ itself so a row of the wrong width is counted and reported. Do not switch `csv-p
 **Profile from a reservoir sample, never the head of the file.** Log files are ordered by time,
 so a contiguous slice lies about cardinality. `sampleRows` gives every row an equal chance.
 
-**The MCP server is read-only, confined and capped, and all three are DuckDB's doing.** Every
+**The MCP server is read only, confined and capped, and all three are DuckDB's doing.** Every
 statement goes through `json_serialize_sql`, which refuses anything but a single `SELECT`;
 `allowed_directories`, `enable_external_access = false` and `lock_configuration` keep a `SELECT`
 from reading any file outside the extraction; and answers stop at `--row-limit` rows.
@@ -121,12 +121,12 @@ Output is unredacted event logs: user ids, URIs, query text, IP addresses. `.git
 
 ## Conventions
 
-- Comments explain **why**, not what, and are written in prose. Match the surrounding density —
+- Comments explain **why**, not what, and are written in prose. Match the surrounding density:
   a non-obvious constant or a defensive choice gets a sentence or two explaining the measurement
   or failure behind it.
 - Decisions live in `specs/` as numbered records (`Context` / `Decision` / `Consequences`) and are
   **kept current**: when a decision changes, rewrite its record to state what holds now, as if it
-  had always said so — no "revised", no "superseded", no narrative of what it used to say — and
+  had always said so, with no "revised", no "superseded" and no narrative of what it used to say, and
   update the table in `specs/README.md`. A genuinely new decision gets its own record.
 - `docs/ARCHITECTURE.md` describes how the pieces fit; keep it in step with structural changes.
 - `CHANGELOG.md` follows Keep a Changelog; the public surface is the four commands and their flags.

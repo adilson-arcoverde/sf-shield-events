@@ -150,28 +150,96 @@ moved as one thing.
 
 Serves the tables to a [Model Context Protocol](https://modelcontextprotocol.io/) client over
 stdio, so an assistant can list the event types, learn what each column is for, run the
-ready-made questions and ask its own. Add it to the client as a stdio server:
+ready-made questions and ask its own. The server reads a directory that `extract` wrote and
+never talks to the org.
 
-```json
-{
-  "mcpServers": {
-    "shield-events": {
-      "command": "sf",
-      "args": ["shield", "events", "mcp", "--input-dir", "/path/to/output"]
-    }
-  }
-}
-```
+#### Setting it up
 
-Five tools: `list_tables`, `describe_table`, `list_questions`, `run_question` and `query`. A
-description gives each column's type and its inferred role and shows no value. The server is
-read-only in the strongest sense DuckDB offers: only a single `SELECT` runs, DuckDB is confined
-to the extraction directory and locked there so no other file on the machine can be read, and
-every answer is capped at `--row-limit` rows, 200 by default, and says when it was cut.
+1. Install the plugin and extract something, as above. The server needs a directory with at
+   least one Parquet table in it; `sf shield events mcp` on an empty directory exits with
+   "No Parquet tables".
+2. Check that the server starts from a shell. It waits for a client on stdin, so end it with
+   Ctrl+C:
+   ```bash
+   sf shield events mcp --input-dir /path/to/output
+   ```
+   The one line it prints goes to stderr, and says how many tables it is serving.
+3. Add it to the client as a stdio server. The directory should be an absolute path, because
+   the client decides the working directory, not you.
+
+   In Claude Code, from the project you are working in:
+
+   ```bash
+   claude mcp add shield-events -- sf shield events mcp --input-dir /path/to/output
+   ```
+
+   In Claude Desktop, in `claude_desktop_config.json` (macOS:
+   `~/Library/Application Support/Claude/`, Windows: `%APPDATA%\Claude\`):
+
+   ```json
+   {
+     "mcpServers": {
+       "shield-events": {
+         "command": "sf",
+         "args": ["shield", "events", "mcp", "--input-dir", "/path/to/output"]
+       }
+     }
+   }
+   ```
+
+   Any other MCP client takes the same three things: the command `sf`, the arguments, and the
+   name you give the server. If the client cannot find `sf`, give it the full path from
+   `which sf`.
+
+4. Restart the client, or reload its servers, and ask it what event types the extraction has.
+
+#### Using it
+
+The server offers five tools, and its instructions tell the assistant to start with the first
+and the third:
+
+| Tool             | What it answers                                                            |
+| ---------------- | -------------------------------------------------------------------------- |
+| `list_tables`    | The event types in the extraction, each with its row count                 |
+| `describe_table` | One table's columns: DuckDB type and role, with no values shown            |
+| `list_questions` | The ready-made questions in `queries/`, each with the event types it needs |
+| `run_question`   | One of those questions, by name                                            |
+| `query`          | One `SELECT` in DuckDB SQL over the tables                                 |
+
+A role is what the column is for, inferred from its values: a `dimension` groups rows, an
+`identifier` is distinct per row and worth counting rather than grouping, a `numeric` column is
+worth summing, a `timestamp` can be a time axis. Things worth asking, in words:
+
+- "Which event types do we have, and how many rows each?"
+- "Run the login failures question."
+- "Which client burned the most API calls last week, by day?"
+- "In ApexExecution, which entry points had the highest average CPU time?"
+- "Describe the AsyncReportRun table and tell me which columns group the rows."
+
+Every answer is capped at `--row-limit` rows, 200 by default, and says when it was cut. An
+assistant that needs more should aggregate or page with `OFFSET`; the cap is a guard on volume,
+not a limit on what can be asked. Times are `TIMESTAMP_DERIVED`, written by Salesforce in UTC.
+
+#### What it will not do
+
+The server is read only in the strongest sense DuckDB offers. Only a single `SELECT` runs, and
+that is decided by DuckDB's own parser, so `COPY`, `CREATE`, `INSTALL` and `SET` are refused
+whatever they look like. DuckDB is confined to the extraction directory and locked there, so a
+`SELECT` over any other file on the machine fails with a permission error. `describe_table`
+shows no values.
 
 The rows are still unredacted production logs, and the client is usually a model running
 elsewhere. Point this at an extraction you would be willing to paste into that model
 ([specs/0008](specs/0008-mcp-server-over-the-extraction.md)).
+
+#### If it does not work
+
+- If the client says the server failed to start, run the command from step 2 in a shell. A
+  wrong `--input-dir`, or an `sf` the client cannot find on its PATH, shows up there.
+- If the assistant sees no tools, the directory has no Parquet files. Run `extract` first, or
+  point `--input-dir` at where its output went.
+- If a question fails with "table not found", the extraction does not have that event type.
+  That is the correct answer, and `list_questions` says what each one needs.
 
 ## What it does not do
 

@@ -87,4 +87,4 @@ lets it work on a type nobody wrote a query for.
   `discover` against an org. Behind a corporate proxy that install honours npm's own proxy
   configuration (`HTTPS_PROXY`, or `npm config set proxy`), like any other plugin.
 - The extraction directory is the project ([0004](0004-rill-project-beside-the-data.md)), and it
-  now opens two ways: `duckdb -init shield.sql` and `rill start`.
+  opens three ways: `duckdb -init shield.sql`, `rill start`, and `sf shield events mcp`.
