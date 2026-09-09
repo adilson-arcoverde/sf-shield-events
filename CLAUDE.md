@@ -45,7 +45,9 @@ Only the tests read `src/` directly.
   its tests run a real DuckDB on tiny files. `project.ts` writes the Rill project; its contract
   test runs `rill validate` and is skipped without Rill on PATH — install Rill to exercise it.
 - `queries/*.sql` — the ready-made questions `extract` copies into the output. Shipped in the
-  package (`files` in `package.json`), read at runtime from `this.config.root`.
+  package (`files` in `package.json`), read at runtime from the plugin's own root
+  (`this.config.plugins.get('sf-shield-events').root`), which is not `this.config.root` once the
+  plugin is installed under the `sf` CLI.
 - Relative imports carry a **`.ts` extension** in source (`allowImportingTsExtensions` +
   `rewriteRelativeImportExtensions`). Follow the existing style; `.js` extensions will not match.
 - `rootDir` is `.`, so the build nests output as `lib/src/...` — which is why `package.json` sets

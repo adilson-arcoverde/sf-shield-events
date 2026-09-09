@@ -4,6 +4,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html), where the public surface is
 the three commands and their flags.
 
+## [Unreleased]
+
+### Fixed
+
+- `sf shield events extract` installed under the `sf` CLI failed after writing the tables,
+  because it looked for the shipped `queries/` in the CLI's root instead of the plugin's. The
+  tables and `shield.sql` were written; the queries were not, and the command reported an error.
+
 ## [0.1.0] - 2026-09-08
 
 ### Added
@@ -37,4 +45,5 @@ the three commands and their flags.
 - Measured on a production org, one day of one event type is a 412 MB file streamed into
   1,012,250 rows; a 381 MB local file streams in 23 seconds at a peak of 175 MB.
 
+[Unreleased]: https://github.com/adilson-arcoverde/sf-shield-events/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/adilson-arcoverde/sf-shield-events/releases/tag/v0.1.0

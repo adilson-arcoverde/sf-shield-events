@@ -329,7 +329,10 @@ Run "sf shield events discover" first to see which EventTypes an org has.`;
     const tables = (await readdir(directory)).filter((name) => name.endsWith('.parquet'));
 
     await writeFile(join(directory, 'shield.sql'), buildViewsScript(tables.map((name) => basename(name, '.parquet'))));
-    await cp(join(this.config.root, 'queries'), join(directory, 'queries'), { recursive: true, force: false });
+    // The queries ship in the plugin's own package, and installed under the `sf` CLI the plugin's
+    // root is not the CLI's: `this.config.root` is the CLI, and the directory does not exist there.
+    const pluginRoot = this.config.plugins.get('sf-shield-events')?.root ?? this.config.root;
+    await cp(join(pluginRoot, 'queries'), join(directory, 'queries'), { recursive: true, force: false });
 
     this.log(`\n${tables.length} tables in ${directory}. Open with: cd ${directory} && duckdb -init shield.sql`);
   }
