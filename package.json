@@ -31,6 +31,9 @@
   ],
   "dependencies": {
     "@duckdb/node-api": "^1.5.5-r.4",
+    "@inquirer/checkbox": "^5.2.5",
+    "@inquirer/input": "^5.1.6",
+    "@inquirer/select": "^5.2.5",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@oclif/core": "^4.14.0",
     "@salesforce/core": "^8",

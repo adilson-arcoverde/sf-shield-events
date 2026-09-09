@@ -7,7 +7,21 @@ import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Connection, SfError } from '@salesforce/core';
 import type { DuckDBConnection } from '@duckdb/node-api';
 import { unionHeader } from '../../../events/consolidate.ts';
+import checkbox from '@inquirer/checkbox';
+import input from '@inquirer/input';
+import select from '@inquirer/select';
+import { StateAggregator } from '@salesforce/core';
 import { buildLogFileQuery, formatBytes, LOG_FILE_INTERVALS, type LogFileInterval } from '../../../events/logfiles.ts';
+import {
+  dateBounds,
+  describeChoice,
+  equivalentCommand,
+  forInterval,
+  hasHourlyFiles,
+  INVENTORY_QUERY,
+  summarizeInventory,
+  type InventoryRecord,
+} from '../../../events/inventory.ts';
 import { appendLogFile, type AppendResult } from '../../../events/stream.ts';
 import { buildViewsScript, convertToParquet, withDuckDB } from '../../../events/tables.ts';
 
@@ -44,6 +58,10 @@ const DEFAULT_CONCURRENCY = 4;
 
 const MAXIMUM_CONCURRENCY = 8;
 
+const DEFAULT_OUTPUT_DIR = 'output';
+
+const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
  * Downloads the log files an org has for the requested EventTypes and writes one table per type.
  *
@@ -63,9 +81,12 @@ Files are streamed to disk rather than buffered. Event log files are large: in a
 
 Beside the tables the command writes shield.sql, which opens every table as a view in DuckDB, and a queries directory of ready-made questions. Open from the output directory with "duckdb -init shield.sql".
 
-Run "sf shield events discover" first to see which EventTypes an org has.`;
+Without --event-type, in a terminal, the command asks: it lists the EventTypes the org has with their file counts, sizes and days, lets you pick, proposes the date range the org covers, and prints the command line that would do the same without asking. Outside a terminal, or with --json or --no-prompt, --event-type is required.
+
+Run "sf shield events discover" to see which EventTypes an org has without extracting anything.`;
 
   public static readonly examples = [
+    '<%= config.bin %> <%= command.id %> --target-org my-org',
     '<%= config.bin %> <%= command.id %> --target-org my-org --event-type ApexRestApi',
     '<%= config.bin %> <%= command.id %> --target-org my-org -e Login -e Logout --start-date 2026-09-01',
     '<%= config.bin %> <%= command.id %> --target-org my-org -e ApexExecution --no-prompt',
@@ -74,9 +95,8 @@ Run "sf shield events discover" first to see which EventTypes an org has.`;
   public static readonly flags = {
     'target-org': Flags.requiredOrg(),
     'event-type': Flags.string({
-      summary: 'EventType to download. Repeat the flag for more than one.',
+      summary: 'EventType to download. Repeat the flag for more than one; leave it out to choose from a list.',
       multiple: true,
-      required: true,
       char: 'e',
     }),
     interval: Flags.string({
@@ -88,9 +108,9 @@ Run "sf shield events discover" first to see which EventTypes an org has.`;
     }),
     'start-date': Flags.string({ summary: 'Earliest log date to include, as YYYY-MM-DD.' }),
     'end-date': Flags.string({ summary: 'Latest log date to include, as YYYY-MM-DD.' }),
-    'output-dir': Flags.directory({ summary: 'Where to write the tables.', default: 'output' }),
+    'output-dir': Flags.directory({ summary: 'Where to write the tables.', default: DEFAULT_OUTPUT_DIR }),
     'no-prompt': Flags.boolean({
-      summary: 'Download whatever matches without asking, however large.',
+      summary: 'Download whatever matches without asking, however large. Makes --event-type required.',
       default: false,
     }),
     concurrency: Flags.integer({
@@ -109,15 +129,47 @@ Run "sf shield events discover" first to see which EventTypes an org has.`;
     const { flags } = await this.parse(Extract);
     const connection = flags['target-org'].getConnection();
 
+    const request = {
+      eventTypes: flags['event-type'] ?? [],
+      interval: flags.interval as LogFileInterval,
+      startDate: flags['start-date'],
+      endDate: flags['end-date'],
+    };
+
+    if (request.eventTypes.length === 0) {
+      if (!this.canAsk(flags['no-prompt'])) {
+        throw new SfError('Missing required flag event-type.', 'MissingEventType', [
+          'Pass --event-type once per type, or run the command in a terminal without --json or --no-prompt to choose from a list.',
+        ]);
+      }
+
+      const chosen = await this.ask(connection, request);
+
+      if (chosen === undefined) {
+        return [];
+      }
+
+      Object.assign(request, chosen);
+
+      this.log(
+        '\nThe same extraction without the questions:\n  ' +
+          equivalentCommand({
+            bin: this.config.bin,
+            targetOrg: await this.orgName(flags['target-org'].getUsername()),
+            ...request,
+            outputDir: flags['output-dir'],
+            defaultOutputDir: DEFAULT_OUTPUT_DIR,
+            concurrency: flags.concurrency,
+            defaultConcurrency: DEFAULT_CONCURRENCY,
+          }) +
+          '\n'
+      );
+    }
+
     let query: string;
 
     try {
-      query = buildLogFileQuery({
-        eventTypes: flags['event-type'],
-        interval: flags.interval as LogFileInterval,
-        startDate: flags['start-date'],
-        endDate: flags['end-date'],
-      });
+      query = buildLogFileQuery(request);
     } catch (error) {
       throw new SfError(error instanceof Error ? error.message : String(error), 'InvalidArguments');
     }
@@ -317,6 +369,84 @@ Run "sf shield events discover" first to see which EventTypes an org has.`;
         }
       }
     }
+  }
+
+  /**
+   * Whether there is someone to ask. A pipe, a `--json` caller and `--no-prompt` all mean no.
+   */
+  private canAsk(noPrompt: boolean): boolean {
+    return Boolean(process.stdin.isTTY && process.stdout.isTTY) && !this.jsonEnabled() && !noPrompt;
+  }
+
+  /**
+   * The org as the reader named it, so the printed command line reads back the way it was typed.
+   */
+  private async orgName(username: string | undefined): Promise<string> {
+    if (!username) {
+      return '';
+    }
+
+    const aliases = (await StateAggregator.getInstance()).aliases.getAll(username);
+    return aliases[0] ?? username;
+  }
+
+  /**
+   * Asks what to extract, in the order the answers depend on each other: the interval first,
+   * since it changes which files exist, then the types with what each one costs, then the days.
+   * Every default is what the org has, so accepting them means "all of it".
+   *
+   * @returns The choices, or `undefined` when the org has nothing to choose from.
+   */
+  private async ask(
+    connection: Connection,
+    given: { interval: LogFileInterval; startDate?: string; endDate?: string }
+  ): Promise<{ eventTypes: string[]; interval: LogFileInterval; startDate?: string; endDate?: string } | undefined> {
+    const inventory = summarizeInventory((await connection.query<InventoryRecord>(INVENTORY_QUERY)).records);
+
+    if (inventory.length === 0) {
+      this.log('No event log files in this org, or none visible to this user. Nothing to choose from.');
+      return undefined;
+    }
+
+    let interval = given.interval;
+
+    if (hasHourlyFiles(inventory)) {
+      interval = await select<LogFileInterval>({
+        message: 'This org keeps hourly files as well as daily ones. Which to read?',
+        choices: LOG_FILE_INTERVALS.map((value) => ({
+          value,
+          name: value,
+          description:
+            value === 'Daily'
+              ? 'One file per day per type.'
+              : 'One file per hour per type; the daily file holds the same rows.',
+        })),
+        default: given.interval,
+      });
+    }
+
+    const available = forInterval(inventory, interval);
+    const width = Math.max(...available.map((entry) => entry.eventType.length));
+    const eventTypes = await checkbox<string>({
+      message: 'Which EventTypes? Space selects, enter confirms.',
+      choices: available.map((entry) => ({ value: entry.eventType, name: describeChoice(entry, width) })),
+      pageSize: 15,
+      required: true,
+      loop: false,
+    });
+
+    const bounds = dateBounds(available.filter((entry) => eventTypes.includes(entry.eventType)));
+    const askDate = (message: string, fallback?: string) =>
+      input({
+        message,
+        default: fallback,
+        validate: (value) => CALENDAR_DATE.test(value) || 'A date as YYYY-MM-DD.',
+      });
+
+    const startDate = await askDate('From which day?', given.startDate ?? bounds?.earliest);
+    const endDate = await askDate('Until which day?', given.endDate ?? bounds?.latest);
+
+    return { eventTypes, interval, startDate, endDate };
   }
 
   /**

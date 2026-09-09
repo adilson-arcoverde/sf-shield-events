@@ -61,8 +61,8 @@ dashboards need [Rill](https://docs.rilldata.com/home/install).
 
 ### `sf shield events discover`
 
-Asks the org which event types it has logs for, and how many files each one has. No list of
-event types is built into this tool: the answer depends on the edition, on which Shield features
+Asks the org which event types it has logs for, and for each one how many files, how large,
+and which days they cover. No list of event types is built into this tool: the answer depends on the edition, on which Shield features
 are licensed, and on what happened in the org inside the retention window.
 
 An org with Shield or the Event Monitoring add-on generates event log files by default and
@@ -73,8 +73,15 @@ org has no files at all, which `discover` reports as none rather than as an erro
 ### `sf shield events extract`
 
 Downloads the log files for the event types you name and writes one Parquet table per type,
-then makes the directory a database: `shield.sql` opens every table as a view, and `queries/`
-holds one SQL file per question people bring to event logs.
+then makes the directory a database. Name no types and, in a terminal, it asks instead: a list
+of the org's event types with the files, size and days each one costs, then the first and last
+day, proposed as what you picked covers. Before downloading it prints the command line that runs
+the same extraction without a question, so the second time can be a script
+([specs/0009](specs/0009-extract-asks-when-not-told.md)). Outside a terminal, with `--json` or
+with `--no-prompt`, `--event-type` is required, and a pipeline never sees a prompt.
+
+Either way it makes the directory a database: `shield.sql` opens every table as a view, and
+`queries/` holds one SQL file per question people bring to event logs.
 
 The columns of a table are the union of what the org declares across the matching files, not
 the columns of the first one. Salesforce changes them between API versions, and an extraction
@@ -92,7 +99,7 @@ Types are given only where nothing is lost: whole numbers, dates, timestamps, bo
 packed Salesforce timestamp, a version number or a key prefix stays text exactly as the org
 wrote it ([specs/0007](specs/0007-parquet-tables-and-sql.md)).
 
-The flags: `--event-type` (`-e`), repeated for each type; `--start-date` and `--end-date` as
+The flags: `--event-type` (`-e`), repeated for each type, or left out to choose from a list; `--start-date` and `--end-date` as
 `YYYY-MM-DD`, both inclusive; `--output-dir`, `output` by default; `--no-prompt` to skip the
 question above 500 MB; `--interval`, `Daily` by default or `Hourly`, in an org that keeps both,
 because reading both would count every event twice; `--concurrency`, how many event types

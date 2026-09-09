@@ -48,6 +48,20 @@ tested in `events/logfiles.ts`, which validates each EventType name as an identi
 into a SOQL literal and a file name) and always filters on `Interval`, because an org with hourly
 files keeps a daily file holding the same rows.
 
+## When `extract` is not told what to extract
+
+Without `--event-type`, and only when stdin and stdout are a terminal with `--json` and
+`--no-prompt` off, `extract` runs the inventory query, one aggregate over `EventLogFile` by type
+and interval returning the file count, the bytes and the first and last day. It asks in the
+order the answers depend on each other: the interval, only where the org has hourly files; the
+types, each line saying what choosing it costs; then the days, proposed as the span the chosen
+types cover. It prints the equivalent command line, ending in `--no-prompt`, and continues as if
+the flags had been given. Anywhere else a missing `--event-type` is the error it always was.
+
+The list lines, the date bounds and the printed command are pure functions in
+`events/inventory.ts`; the prompts themselves are the `@inquirer` family that
+`@salesforce/sf-plugins-core` already uses for its confirmation.
+
 ## From stream to table
 
 The streamed CSV is an intermediate. When every file of an event type has been appended, DuckDB
@@ -69,10 +83,11 @@ already there, since the reader may have edited it.
 
 | Module                               | Responsibility                                                                     |
 | ------------------------------------ | ---------------------------------------------------------------------------------- |
-| `commands/shield/events/discover.ts` | One query, one table of counts, and a clear failure when the object is not visible |
-| `commands/shield/events/extract.ts`  | Query, download each file, group by event type, convert, write the project         |
+| `commands/shield/events/discover.ts` | The inventory query as a table, and a clear failure when the object is not visible |
+| `commands/shield/events/extract.ts`  | Ask if not told, query, download each file, group by type, convert, write the project |
 | `commands/shield/events/rill.ts`     | Call `writeRillProject`, then say what it wrote                                    |
 | `commands/shield/events/mcp.ts`      | Open the directory, lock DuckDB to it, and serve the tools on stdio                |
+| `events/inventory.ts`                | The one query behind `discover` and the guide; the list lines and the command line |
 | `events/logfiles.ts`                 | The SOQL that finds the files: type names validated, interval, dates               |
 | `events/consolidate.ts`              | The union of columns and the check that a file matches it. Knows nothing of orgs   |
 | `events/stream.ts`                   | One log file, from a stream, appended to a CSV without being held                  |

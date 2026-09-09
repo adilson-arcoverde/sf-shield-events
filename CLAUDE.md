@@ -39,13 +39,15 @@ Only the tests read `src/` directly.
 - `src/commands/shield/events/{discover,extract,rill,mcp}.ts` — the oclif commands. Each is a
   `default export class` extending `SfCommand`; that default export is the contract oclif loads,
   so the usual no-default-export lint rule is off.
-- `src/events/{consolidate,logfiles,mcp,project,rill,stream,tables}.ts` — modules that know nothing
+- `src/events/{consolidate,inventory,logfiles,mcp,project,rill,stream,tables}.ts` — modules that know nothing
   about orgs or the CLI. They take rows, streams and file paths and return data. Keep them that
   way: this is where the tests are and the only reason the interesting behaviour is testable
   without an org. `tables.ts` is the DuckDB side (CSV to Parquet, sampling, the views script) and
   its tests run a real DuckDB on tiny files. `project.ts` writes the Rill project; its contract
   test runs `rill validate` and is skipped without Rill on PATH — install Rill to exercise it.
   `mcp.ts` builds the MCP server; its test talks to it through an in-memory transport.
+  `inventory.ts` is the one query behind `discover` and the guided `extract`, plus the list lines
+  and the printed command line, all pure.
 - `queries/*.sql` — the ready-made questions `extract` copies into the output. Shipped in the
   package (`files` in `package.json`), read at runtime from the plugin's own root
   (`this.config.plugins.get('sf-shield-events').root`), which is not `this.config.root` once the
@@ -101,6 +103,12 @@ from reading any file outside the extraction; and answers stop at `--row-limit` 
 `describe_table` shows no values. Do not replace the parser gate with a regular expression over
 the text, and do not print anything to stdout in the `mcp` command: stdout is the protocol. See
 [specs/0008](specs/0008-mcp-server-over-the-extraction.md).
+
+**Never prompt without someone to ask.** `extract` asks only when stdin and stdout are a
+terminal, `--json` is off and `--no-prompt` is off; otherwise a missing `--event-type` is an
+error. Keep that check in `canAsk` and keep everything a prompt is built from in
+`events/inventory.ts`, where it is tested. See
+[specs/0009](specs/0009-extract-asks-when-not-told.md).
 
 **No credentials anywhere.** `Flags.requiredOrg()` hands over a live `Connection` from the `sf`
 CLI's own auth. There is no token to store, no instance URL to track, no `.env`.
