@@ -1,6 +1,7 @@
 # sf-shield-events
 
 [![CI](https://github.com/adilson-arcoverde/sf-shield-events/actions/workflows/ci.yml/badge.svg)](https://github.com/adilson-arcoverde/sf-shield-events/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/sf-shield-events)](https://www.npmjs.com/package/sf-shield-events)
 
 An `sf` CLI plugin that pulls Salesforce Shield Event Monitoring logs out of an org into a
 directory of Parquet tables you can ask questions of with [DuckDB](https://duckdb.org/), with
@@ -45,6 +46,18 @@ questions people actually ask kept as SQL files you can read and change
 
 ```bash
 sf plugins install sf-shield-events
+```
+
+That installs the current release, 0.3.0 at the time of writing, from
+[npm](https://www.npmjs.com/package/sf-shield-events). The `latest` tag on npm is only ever
+given to a release, so the bare name is the stable line; a prerelease, if there is one, is
+published under `next` and nobody gets it without asking. To hold a version, or to get one
+the registry has only just started serving, name it:
+
+```bash
+sf plugins install sf-shield-events@0.3.0
+sf plugins update                    # later, to move to the newest release
+sf plugins                           # to see which version is installed
 ```
 
 The CLI will say it cannot verify the publisher, because the plugin is not signed by Salesforce.
@@ -269,6 +282,22 @@ test hands a generated project to `rill validate` when Rill is installed.
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) describes how the pieces fit. [specs/](specs/)
 records why each decision was made, with the measurements behind it.
+
+### Releasing
+
+A release is a commit, a tag and a package that say the same thing. `npm publish` refuses to
+run unless the tree is clean and `HEAD` carries the tag of the version in `package.json`, so
+the order is fixed:
+
+```bash
+npm version 0.4.0 --no-git-tag-version   # then close the section in CHANGELOG.md
+git commit -am 'chore: version 0.4.0' && git push
+git tag -a v0.4.0 -m v0.4.0 && git push origin v0.4.0
+gh release create v0.4.0 --notes-file <the changelog section>
+npm publish --access public              # builds from scratch, asks for the 2FA code
+```
+
+A prerelease goes out as `npm publish --tag next`, so `latest` stays the release line.
 
 ## License
 

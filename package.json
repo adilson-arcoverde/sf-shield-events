@@ -70,6 +70,7 @@
   },
   "scripts": {
     "build": "rm -rf lib tsconfig.tsbuildinfo && tsc --build",
+    "prepublishOnly": "node scripts/check-release.mjs",
     "prepack": "npm run build && oclif manifest",
     "postpack": "rm -f oclif.manifest.json",
     "test": "node --test test/*.test.ts",
