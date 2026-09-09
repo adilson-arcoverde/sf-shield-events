@@ -48,14 +48,14 @@ questions people actually ask kept as SQL files you can read and change
 sf plugins install sf-shield-events
 ```
 
-That installs the current release, 0.3.0 at the time of writing, from
+That installs the current release, 0.3.1 at the time of writing, from
 [npm](https://www.npmjs.com/package/sf-shield-events). The `latest` tag on npm is only ever
 given to a release, so the bare name is the stable line; a prerelease, if there is one, is
 published under `next` and nobody gets it without asking. To hold a version, or to get one
 the registry has only just started serving, name it:
 
 ```bash
-sf plugins install sf-shield-events@0.3.0
+sf plugins install sf-shield-events@0.3.1
 sf plugins update                    # later, to move to the newest release
 sf plugins                           # to see which version is installed
 ```
