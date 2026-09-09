@@ -1,6 +1,6 @@
 {
   "name": "sf-shield-events",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Extract Salesforce Shield Event Monitoring logs and turn them into Rill dashboards",
   "keywords": [
     "salesforce",
