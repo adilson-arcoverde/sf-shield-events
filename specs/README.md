@@ -17,6 +17,7 @@ where they explain the choice; the git history keeps every version anyway.
 | [0005](0005-apache-2-0.md)                   | Publish under Apache 2.0                                            | Accepted |
 | [0006](0006-stream-the-download.md)          | Stream the download, and take the union from metadata               | Accepted |
 | [0007](0007-parquet-tables-and-sql.md)       | The deliverable is Parquet tables and SQL; dashboards are optional  | Accepted |
+| [0008](0008-mcp-server-over-the-extraction.md) | An MCP server answers questions over the extraction, read-only and capped | Accepted |
 
 The drafting and the code were done with an AI assistant; the decisions are the author's. It is
 said here once rather than on each record.

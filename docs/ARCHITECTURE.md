@@ -2,24 +2,25 @@
 
 How the pieces fit. For why each decision went this way, read [specs/](../specs/).
 
-## The three commands and what flows between them
+## The four commands and what flows between them
 
 ```
    the org                       output/                             output/
       |                             |                                   |
   discover  ---- names ---->    extract    ---- Parquet tables ---->  rill  ----> rill start
-      |                             |                                   |
- GROUP BY EventType        one .parquet per type,              model, metrics view
- with a file count         shield.sql, queries/                and dashboard per type
-                                    |
-                                    +----> duckdb -init shield.sql
+      |                             |                          \           |
+ GROUP BY EventType        one .parquet per type,               \   model, metrics view
+ with a file count         shield.sql, queries/                  \  and dashboard per type
+                                    |                             \
+                                    +----> duckdb -init shield.sql +--> mcp <---> an assistant
 ```
 
 Each command is usable on its own. `discover` answers a question, `extract` produces a
-queryable directory, and `rill` reads that directory. Nothing is passed in memory between them,
-which means an extraction can be inspected, moved or re-explored without downloading it again.
+queryable directory, and `rill` and `mcp` read that directory. Nothing is passed in memory
+between them, which means an extraction can be inspected, moved or re-explored without
+downloading it again.
 
-`rill` is optional. The tables are already a database the moment `extract` finishes.
+`rill` and `mcp` are optional. The tables are already a database the moment `extract` finishes.
 
 ## Where the org connection comes from
 
@@ -71,12 +72,14 @@ already there, since the reader may have edited it.
 | `commands/shield/events/discover.ts` | One query, one table of counts, and a clear failure when the object is not visible |
 | `commands/shield/events/extract.ts`  | Query, download each file, group by event type, convert, write the project         |
 | `commands/shield/events/rill.ts`     | Call `writeRillProject`, then say what it wrote                                    |
+| `commands/shield/events/mcp.ts`      | Open the directory, lock DuckDB to it, and serve the tools on stdio                |
 | `events/logfiles.ts`                 | The SOQL that finds the files: type names validated, interval, dates               |
 | `events/consolidate.ts`              | The union of columns and the check that a file matches it. Knows nothing of orgs   |
 | `events/stream.ts`                   | One log file, from a stream, appended to a CSV without being held                  |
 | `events/tables.ts`                   | CSV to Parquet, the reservoir sample, the views script. All through DuckDB         |
 | `events/project.ts`                  | The Rill project over a directory of tables, so a test can hand one to Rill        |
 | `events/rill.ts`                     | Column profiling and the Rill resource shapes. Knows nothing about files           |
+| `events/mcp.ts`                      | The MCP tools over a locked connection: list, describe, the questions, one SELECT  |
 | `queries/*.sql`                      | One question each, over named event types and columns                              |
 
 The modules under `events/` know nothing about orgs or the CLI. That is what lets the
@@ -124,6 +127,28 @@ beside the data:
 
 Measures use `TRY_CAST(column AS DOUBLE)` rather than a cast, so one unparseable value does not
 take down a measure.
+
+## The MCP server
+
+`mcp` opens every Parquet file in the directory as a view, with absolute paths since the process
+does not change into the directory, and then locks the connection to it: `allowed_directories`
+names the directory, `enable_external_access` is turned off, and `lock_configuration` keeps a
+client from turning it back on. A `SELECT` over a file elsewhere on the machine fails with a
+permission error.
+
+Every statement a client sends goes through `json_serialize_sql` before it runs. DuckDB's own
+parser serialises a `SELECT` and refuses everything else, so the gate is the parser and not a
+regular expression over the text, and one statement runs at a time. The read stops once
+`--row-limit` rows have been passed, and the answer says it was cut.
+
+`describe_table` returns each column's DuckDB type and its role from `profileColumns` over the
+same reservoir sample the dashboards use, and no value: the values are user ids, addresses and
+query text, and a description does not need them. `list_questions` reads only the comment header
+of each file in `queries/`: the question it answers and its `-- Needs:` line.
+
+The transport is stdio, so stdout is the protocol and anything meant for a person goes to
+stderr. The test connects a client through an in-memory pair and tries what a hostile client
+would: `COPY` to a file, a `SET` on the guard, a `SELECT` over a file outside the directory.
 
 ## What is not here
 

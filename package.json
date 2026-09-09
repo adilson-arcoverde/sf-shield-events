@@ -31,12 +31,14 @@
   ],
   "dependencies": {
     "@duckdb/node-api": "^1.5.5-r.4",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@oclif/core": "^4.14.0",
     "@salesforce/core": "^8",
     "@salesforce/sf-plugins-core": "^12",
     "csv-parse": "^7.0.2",
     "csv-stringify": "^6.8.3",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

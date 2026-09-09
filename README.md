@@ -5,7 +5,7 @@
 An `sf` CLI plugin that pulls Salesforce Shield Event Monitoring logs out of an org into a
 directory of Parquet tables you can ask questions of with [DuckDB](https://duckdb.org/), with
 the usual questions already written. Optionally, a [Rill](https://www.rilldata.com/) project
-over the same tables.
+over the same tables, or an MCP server so an assistant can ask.
 
 ```bash
 sf shield events discover --target-org my-org
@@ -14,8 +14,8 @@ cd output && duckdb -init shield.sql      # then, at the DuckDB prompt:
 .read queries/slow_apex_entry_points.sql
 ```
 
-Two commands and a database: find out what the org has, download it, ask. A third command,
-optional, puts dashboards over the same tables.
+Two commands and a database: find out what the org has, download it, ask. Two more, both
+optional, put dashboards over the same tables or serve them to an AI assistant.
 
 ## Status
 
@@ -138,6 +138,33 @@ this tool has never seen still produces a usable dashboard, which is the whole p
 
 The project is written beside the tables so `rill start output` works and the directory can be
 moved as one thing.
+
+### `sf shield events mcp` (optional)
+
+Serves the tables to a [Model Context Protocol](https://modelcontextprotocol.io/) client over
+stdio, so an assistant can list the event types, learn what each column is for, run the
+ready-made questions and ask its own. Add it to the client as a stdio server:
+
+```json
+{
+  "mcpServers": {
+    "shield-events": {
+      "command": "sf",
+      "args": ["shield", "events", "mcp", "--input-dir", "/path/to/output"]
+    }
+  }
+}
+```
+
+Five tools: `list_tables`, `describe_table`, `list_questions`, `run_question` and `query`. A
+description gives each column's type and its inferred role and shows no value. The server is
+read-only in the strongest sense DuckDB offers: only a single `SELECT` runs, DuckDB is confined
+to the extraction directory and locked there so no other file on the machine can be read, and
+every answer is capped at `--row-limit` rows, 200 by default, and says when it was cut.
+
+The rows are still unredacted production logs, and the client is usually a model running
+elsewhere. Point this at an extraction you would be willing to paste into that model
+([specs/0008](specs/0008-mcp-server-over-the-extraction.md)).
 
 ## What it does not do
 

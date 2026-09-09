@@ -6,6 +6,15 @@ the three commands and their flags.
 
 ## [Unreleased]
 
+### Added
+
+- `sf shield events mcp`, serving an extraction directory to a Model Context Protocol client
+  over stdio: list the tables, describe a table by column type and role without showing a
+  value, list and run the ready-made questions, and run a single `SELECT`. DuckDB is confined
+  to the directory and locked there, anything that is not one `SELECT` is refused, and every
+  answer is capped at `--row-limit` rows, 200 by default. See
+  [specs/0008](specs/0008-mcp-server-over-the-extraction.md).
+
 ### Fixed
 
 - `sf shield events extract` installed under the `sf` CLI failed after writing the tables,
